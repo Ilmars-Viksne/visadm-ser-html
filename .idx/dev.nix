@@ -1,38 +1,26 @@
-# To learn more about how to use Nix to configure your environment
-# see: https://developers.google.com/idx/guides/customize-idx-env
 { pkgs, ... }: {
-  # Which nixpkgs channel to use.
-  channel = "stable-24.05"; # or "unstable"
-  # Use https://search.nixos.org/packages to find packages
+  # Specifies the Nix packages channel. "stable-24.05" ensures we use a
+  # consistent and well-tested set of packages.
+  channel = "stable-24.05";
+
+  # A list of packages to install from the specified channel.
   packages = [
-    pkgs.python3
-    pkgs.pip
+    # Installs the Python 3.11 interpreter.
+    pkgs.python311
+    # Installs Python packages directly through Nix for better reproducibility.
+    pkgs.python311Packages.pandas
+    pkgs.python311Packages.jinja2
   ];
-  # Sets environment variables in the workspace
-  env = {};
+
   idx = {
-    # Search for the extensions you want on https://open-vsx.org/ and use "publisher.id"
-    extensions = [
-      "ms-python.python"
-    ];
-    # Enable previews
-    previews = {
-      enable = true;
-      previews = {
-        web = {
-          command = ["flask" "run" "--port" "$PORT"];
-          manager = "web";
-        };
-      };
-    };
-    # Workspace lifecycle hooks
+    # A list of VS Code extensions to install from the Open VSX Registry.
+    extensions = [ "ms-python.python" ];
+
+    # Workspace lifecycle hooks.
+    # The onCreate hook is no longer needed to install python packages,
+    # as they are now managed directly by Nix.
     workspace = {
-      # Runs when a workspace is first created
-      onCreate = {
-        pip-install = "pip install -r requirements.txt";
-      };
-      # Runs when the workspace is (re)started
-      onStart = {};
+      onCreate = {};
     };
   };
 }
