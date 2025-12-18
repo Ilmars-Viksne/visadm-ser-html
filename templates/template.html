@@ -1,14 +1,67 @@
-<html>
-<h2><div align="center">Exam Version {{ variant }}</div></h2>
-<span style="color:blue"><b>Please ensure that you have selected the correct version of the exam questions!</b></span>
-The version number should match the last digit of your student code.
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Exam Version {{ variant }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<b>Solutions should be submitted in PDF format </b>. Each solution should clearly demonstrate the problem-solving process. Additionally, <b>each solution must include a ‘Summary’ section</b>. This section should provide the answer to the problem question and present any additional information required for the problem. 
+  <!-- MathJax configuration: inline and display math -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      options: {
+        skipHtmlTags: ['script','noscript','style','textarea','pre','code'],
+      }
+    };
+  </script>
+  <!-- Load MathJax v3 (TeX input, CHTML output) -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
 
-If a problem involves a logarithmic function, it should be assumed that the function is a natural logarithm.
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 2rem; line-height: 1.5; }
+    h2, h3 { margin: 0.5rem 0 1rem; }
+    .notice { color: #0b66e3; font-weight: 700; }
+    .imgwrap { text-align: center; margin-top: 1rem; }
+    .imgwrap img { max-width: 360px; height: auto; border: 1px solid #ccc; padding: 4px; }
+  </style>
 
-<h3><div align="center">Problem 1</div></h3>
-Identify all critical points in the range {{ problem_range }}, determine the nature of each critical point, and create plots for the following function:
+  <!-- If you use a Content Security Policy, allow data: images -->
+  <!-- <meta http-equiv="Content-Security-Policy" content="img-src 'self' data:;"> -->
+</head>
 
-{{ problem_function }}
+<body>
+
+  <h2><div align="center">Exam Version {{ variant }}</div></h2>
+
+  <p class="notice">Please ensure that you have selected the correct version of the exam questions!</p>
+  <p>The version number should match the last digit of your student code.</p>
+
+  <p><b>Solutions should be submitted in PDF format</b>. Each solution should clearly demonstrate the problem-solving process.
+     Additionally, <b>each solution must include a ‘Summary’ section</b>. This section should provide the answer to the problem
+     question and present any additional information required for the problem.</p>
+
+  <p>If a problem involves a logarithmic function, it should be assumed that the function is a natural logarithm.</p>
+
+  <h3><div align="center">Problem 1</div></h3>
+
+  <p>
+    Identify all critical points in the range {{ problem_range }}, determine the nature of each critical point,
+    and create plots for the following function:
+  </p>
+
+  <!-- Wrap the function in inline math delimiters so MathJax renders it -->
+  <p>\( {{ problem_function }} \)</p>
+
+  {% if image_src %}
+  <hr>
+  <p style="text-align:center">
+    <img src="{{ image_src }}" alt="{{ image_alt }}" style="max-width: 360px; height: auto;">
+    
+  </p>
+  {% endif %}
+
+</body>
 </html>
