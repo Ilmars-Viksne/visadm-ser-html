@@ -3,17 +3,19 @@ import os
 import re
 import sys
 from pathlib import Path
+import base64
+from mimetypes import guess_type
 
-# Optional dependencies
+# deps
 try:
     import pandas as pd
-except Exception as e:
+except Exception:
     print("ERROR: pandas is required. Install with 'pip install pandas'.", file=sys.stderr)
     raise
 
 try:
     from jinja2 import Environment
-except Exception as e:
+except Exception:
     print("ERROR: jinja2 is required. Install with 'pip install jinja2'.", file=sys.stderr)
     raise
 
@@ -32,8 +34,27 @@ def sanitize_filename(s: str) -> str:
     return re.sub(r'[^0-9A-Za-z._-]+', '_', s)
 
 def load_template_text(path: Path) -> str:
-    text = path.read_text(encoding='utf-8')
-    return text
+    return path.read_text(encoding='utf-8')
+
+def to_data_uri(src_path_str: str, data_dir: Path) -> str | None:
+    """
+    Returns a data URI (data:<mime>;base64,...) for a local image.
+    Paths in CSV are treated as relative to data_dir unless absolute.
+    """
+    if not src_path_str:
+        return None
+    p = Path(src_path_str)
+    src_path = p if p.is_absolute() else (data_dir / p)
+    if not src_path.exists():
+        # You can log a warning here if desired
+        return None
+    mime, _ = guess_type(src_path.name)
+    if mime is None:
+        # reasonable fallback
+        mime = 'application/octet-stream'
+    b = src_path.read_bytes()
+    b64 = base64.b64encode(b).decode('ascii')
+    return f"data:{mime};base64,{b64}"
 
 def render_pages():
     # Read data
@@ -46,9 +67,19 @@ def render_pages():
 
     count = 0
     for idx, row in df.iterrows():
+        # string-ify and clean None values
         ctx = {k: (v if isinstance(v, str) else ('' if v is None else str(v))) for k, v in row.items()}
+
+        # Build base64 data URI from image_path
+        image_path = (ctx.get('image_path') or '').strip()
+        ctx['image_src'] = to_data_uri(image_path, DATA)
+        ctx['image_alt'] = (ctx.get('image_alt') or '').strip()
+
+        # Filename logic
         variant = ctx.get('variant', '').strip()
         fname = sanitize_filename(f"exam_variant_{variant or idx+1}.html")
+
+        # Render and write
         html = template.render(**ctx)
         (OUTPUT / fname).write_text(html, encoding='utf-8')
         count += 1
