@@ -1,4 +1,0 @@
-variant;problem_range;problem_function
-1;[2,3];f(x) = \frac{x}{6} + \sin(x)
-2;[-1,5];f(x) = \frac{x}{6} + \cos(x)
-3;[0,4];f(x) = x^3 - 2x - 4
