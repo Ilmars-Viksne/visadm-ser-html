@@ -1,11 +1,14 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "visadm-ser-html"
 version = "0.1.0"
 description = "Core package for generating serial standalone HTML pages from tabular data and Jinja2 templates."
-authors = [{ name = "Ilmārs Vīksne" }]
-requires-python = ">=3.10"
 readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Ilmārs Vīksne" }]
 keywords = ["mail merge", "html", "jinja2", "pandas", "mathjax", "base64"]
 
 dependencies = [
@@ -14,13 +17,10 @@ dependencies = [
   "python-dotenv"
 ]
 
-[build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
+[project.optional-dependencies]
+dev = [
+  "pytest"
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.setuptools]
-package-dir = {"" = "src"}
-
