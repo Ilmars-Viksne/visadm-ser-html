@@ -1,90 +1,59 @@
 
 import os
-import re
-import sys
 from pathlib import Path
-import base64
-from mimetypes import guess_type
+import logging
 
-# deps
+# Optional: load .env variables if present
 try:
-    import pandas as pd
+    from dotenv import load_dotenv
+    load_dotenv()
 except Exception:
-    print("ERROR: pandas is required. Install with 'pip install pandas'.", file=sys.stderr)
-    raise
+    pass
 
-try:
-    from jinja2 import Environment
-except Exception:
-    print("ERROR: jinja2 is required. Install with 'pip install jinja2'.", file=sys.stderr)
-    raise
+from visadm_ser_html.logging_config import setup_logging
+from visadm_ser_html.config import load_config
+from visadm_ser_html.data_source import CSVDataSource
+from visadm_ser_html.template_engine import JinjaTemplateEngine
+from visadm_ser_html.image import DataUriEncoder
+from visadm_ser_html.service import MergeService
 
-ROOT = Path(__file__).resolve().parent
-TEMPLATES = ROOT / 'templates'
-DATA = ROOT / 'data'
-OUTPUT = ROOT / 'output'
+def write_documents(output_dir: Path, docs) -> None:
+    """Write rendered documents to disk.
 
-TEMPLATE_PATH = TEMPLATES / 'template.html'
-DATA_PATH = DATA / 'data.csv'
-
-OUTPUT.mkdir(parents=True, exist_ok=True)
-
-def sanitize_filename(s: str) -> str:
-    s = s.strip() or 'doc'
-    return re.sub(r'[^0-9A-Za-z._-]+', '_', s)
-
-def load_template_text(path: Path) -> str:
-    return path.read_text(encoding='utf-8')
-
-def to_data_uri(src_path_str: str, data_dir: Path) -> str | None:
+    Args:
+        output_dir: Destination folder.
+        docs: Iterable of RenderedDocument objects.
     """
-    Returns a data URI (data:<mime>;base64,...) for a local image.
-    Paths in CSV are treated as relative to data_dir unless absolute.
-    """
-    if not src_path_str:
-        return None
-    p = Path(src_path_str)
-    src_path = p if p.is_absolute() else (data_dir / p)
-    if not src_path.exists():
-        # You can log a warning here if desired
-        return None
-    mime, _ = guess_type(src_path.name)
-    if mime is None:
-        # reasonable fallback
-        mime = 'application/octet-stream'
-    b = src_path.read_bytes()
-    b64 = base64.b64encode(b).decode('ascii')
-    return f"data:{mime};base64,{b64}"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for d in docs:
+        (output_dir / d.filename).write_text(d.html, encoding='utf-8')
 
-def render_pages():
-    # Read data
-    df = pd.read_csv(DATA_PATH, sep=';', dtype=str)
 
-    # Prepare template engine
-    template_text = load_template_text(TEMPLATE_PATH)
-    env = Environment(autoescape=True)
-    template = env.from_string(template_text)
+def main() -> None:
+    setup_logging('INFO')
+    cfg = load_config()
+    logging.getLogger(__name__).info("Using config: %s", cfg)
 
-    count = 0
-    for idx, row in df.iterrows():
-        # string-ify and clean None values
-        ctx = {k: (v if isinstance(v, str) else ('' if v is None else str(v))) for k, v in row.items()}
+    data_source = CSVDataSource(cfg.data_path, delimiter=cfg.delimiter)
+    rows = data_source.read_rows()
 
-        # Build base64 data URI from image_path
-        image_path = (ctx.get('image_path') or '').strip()
-        ctx['image_src'] = to_data_uri(image_path, DATA)
-        ctx['image_alt'] = (ctx.get('image_alt') or '').strip()
+    template_text = Path(cfg.template_path).read_text(encoding='utf-8')
+    engine = JinjaTemplateEngine(template_text)
 
-        # Filename logic
-        variant = ctx.get('variant', '').strip()
-        fname = sanitize_filename(f"exam_variant_{variant or idx+1}.html")
+    image_enc = DataUriEncoder(base_dir=str(Path(cfg.data_path).parent))
 
-        # Render and write
-        html = template.render(**ctx)
-        (OUTPUT / fname).write_text(html, encoding='utf-8')
-        count += 1
+    service = MergeService(
+        records=rows,
+        template_engine=engine,
+        image_encoder=image_enc,
+        image_path_field=cfg.image_path_field,
+        image_alt_field=cfg.image_alt_field,
+    )
 
-    print(f"Generated {count} HTML file(s) in: {OUTPUT}")
+    docs = service.generate()
+    write_documents(Path(cfg.output_dir), docs)
+    logging.getLogger(__name__).info("Done. Wrote %d documents to %s", len(docs), cfg.output_dir)
+
 
 if __name__ == '__main__':
-    render_pages()
+    main()
