@@ -1,9 +1,9 @@
 
 from pathlib import Path
 
-from src.visadm_ser_html.template_engine import JinjaTemplateEngine
-from src.visadm_ser_html.image import DataUriEncoder
-from src.visadm_ser_html.service import MergeService
+from visadm_ser_html.template_engine import JinjaTemplateEngine
+from visadm_ser_html.image import DataUriEncoder
+from visadm_ser_html.service import MergeService
 
 
 def test_generate_documents(tmp_path: Path):
