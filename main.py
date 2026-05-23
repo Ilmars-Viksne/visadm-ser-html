@@ -1,21 +1,21 @@
-
-import os
-from pathlib import Path
 import logging
+from pathlib import Path
 
 # Optional: load .env variables if present
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(Path("config") / ".env")
 except Exception:
     pass
 
+
 from visadm_ser_html.logging_config import setup_logging
 from visadm_ser_html.config import load_config
-from visadm_ser_html.data_source import CSVDataSource
+from visadm_ser_html.data_source import create_data_source
 from visadm_ser_html.template_engine import JinjaTemplateEngine
 from visadm_ser_html.image import DataUriEncoder
 from visadm_ser_html.service import MergeService
+
 
 def write_documents(output_dir: Path, docs) -> None:
     """Write rendered documents to disk.
@@ -25,19 +25,20 @@ def write_documents(output_dir: Path, docs) -> None:
         docs: Iterable of RenderedDocument objects.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
+
     for d in docs:
-        (output_dir / d.filename).write_text(d.html, encoding='utf-8')
+        (output_dir / d.filename).write_text(d.html, encoding="utf-8")
 
 
 def main() -> None:
-    setup_logging('INFO')
+    setup_logging("INFO")
     cfg = load_config()
     logging.getLogger(__name__).info("Using config: %s", cfg)
 
-    data_source = CSVDataSource(cfg.data_path, delimiter=cfg.delimiter)
+    data_source = create_data_source(cfg.data_path, delimiter=cfg.delimiter)
     rows = data_source.read_rows()
 
-    template_text = Path(cfg.template_path).read_text(encoding='utf-8')
+    template_text = Path(cfg.template_path).read_text(encoding="utf-8")
     engine = JinjaTemplateEngine(template_text)
 
     image_enc = DataUriEncoder(base_dir=str(Path(cfg.data_path).parent))
@@ -52,8 +53,13 @@ def main() -> None:
 
     docs = service.generate()
     write_documents(Path(cfg.output_dir), docs)
-    logging.getLogger(__name__).info("Done. Wrote %d documents to %s", len(docs), cfg.output_dir)
+
+    logging.getLogger(__name__).info(
+        "Done. Wrote %d documents to %s",
+        len(docs),
+        cfg.output_dir,
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
