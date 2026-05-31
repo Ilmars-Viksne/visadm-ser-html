@@ -30,6 +30,31 @@ def write_documents(output_dir: Path, docs) -> None:
         (output_dir / d.filename).write_text(d.html, encoding="utf-8")
 
 
+def add_embedded_image_sources(rows, image_encoder) -> None:
+    """For every field ending with '_image_path', create a matching '_image_src' field.
+
+    Example:
+        SZ78_C5_image_path -> SZ78_C5_image_src
+        beam_image_path    -> beam_image_src
+        diagram_image_path -> diagram_image_src
+    """
+    for row in rows:
+        image_path_keys = [
+            key for key in row.keys()
+            if key.endswith("_image_path")
+        ]
+
+        for path_key in image_path_keys:
+            src_key = path_key.removesuffix("_image_path") + "_image_src"
+
+            image_path = row.get(path_key, "")
+
+            if image_path:
+                row[src_key] = image_encoder.to_data_uri(image_path)
+            else:
+                row[src_key] = ""
+
+
 def main() -> None:
     setup_logging("INFO")
     cfg = load_config()
@@ -38,10 +63,13 @@ def main() -> None:
     data_source = create_data_source(cfg.data_path, delimiter=cfg.delimiter)
     rows = data_source.read_rows()
 
+    image_enc = DataUriEncoder(base_dir=str(Path(cfg.data_path).parent))
+
+    # Automatically embed all custom image fields ending with "_image_path"
+    add_embedded_image_sources(rows, image_enc)
+
     template_text = Path(cfg.template_path).read_text(encoding="utf-8")
     engine = JinjaTemplateEngine(template_text)
-
-    image_enc = DataUriEncoder(base_dir=str(Path(cfg.data_path).parent))
 
     service = MergeService(
         records=rows,
